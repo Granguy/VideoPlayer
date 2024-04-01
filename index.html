@@ -131,13 +131,12 @@
     
         font-size: 16px;
     }
-
     @media screen and (max-device-width: 1000px) {
     #volumeSlider {
         display: none;
     }
 }
-  
+
     #fullscreenIcon {
         opacity: 50%;
     position: absolute;
@@ -368,9 +367,16 @@
 
 videoPlayer.addEventListener("seeked", function() {
     // Ne synchronisez que si la vidéo est chargée
+    videoPlayer.pause();
+    audioPlayer.pause();
     if (!isVideoLoading) {
         synchronizePlayback();
     }
+    setTimeout(function() {
+        videoPlayer.play();
+    audioPlayer.play();
+    }, 500);
+
 });
 
 // Gérez les événements de chargement de la vidéo
@@ -385,6 +391,7 @@ videoPlayer.addEventListener("loadstart", function() {
 
 // Fonction pour synchroniser les temps de lecture de la vidéo et de l'audio
 function synchronizePlayback() {
+
     if (Math.abs(videoPlayer.currentTime - lastVideoTime) > 0.025) {
         audioPlayer.currentTime = videoPlayer.currentTime;
         lastAudioTime = audioPlayer.currentTime;
@@ -396,6 +403,7 @@ function synchronizePlayback() {
         lastAudioTime = audioPlayer.currentTime;
         console.log("Maj v");
     }
+
 }
 
 
@@ -411,11 +419,16 @@ function synchronizePlayback() {
                 }
             });
 
+   
+           
             // Lancer la lecture
-            videoPlayer.play();
+            setTimeout(function() {
+                audioPlayer.currentTime = videoPlayer.currentTime;
+                videoPlayer.play();
             if (audioUrl) {
                 audioPlayer.play();
             }
+    }, 2000);
 
             // Mettre à jour la position du slider de volume
             updateVolumeSlider();
