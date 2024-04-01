@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lecteur Vidéo</title>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@500&display=swap" rel="stylesheet">
+<style>
+.material-symbols-outlined {
+  font-variation-settings:
+  'FILL' 0,
+  'wght' 250,
+  'GRAD' 0,
+  'opsz' 24
+}
+*{
+  font-family: "Ubuntu", sans-serif;
+  font-weight: 500;
+  font-style: normal;
+}
+
+    body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #141414;
+    }
+
+    body::-webkit-scrollbar { width: 0 !important }
+    label {
+        font-weight: bold;
+    }
+    input[type="text"] {
+        width: 100%;
+    }
+    button[type="submit"] {
+        height: 100%;
+        width: 75px;
+        background-color: #000000;
+        color: white;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.3s ease; 
+    }
+    button[type="submit"]:hover {
+        background-color: #1f1f1f;
+    }
+
+    #videoForm{
+        display: flex;
+    flex-direction: row;
+    align-content: center;
+    height: 50px;
+    margin-bottom: 20PX;
+    overflow: hidden;
+    border-radius: 5px;
+    }
+    #videoContainer{
+        position: relative;
+        z-index: 0;
+        width: 100%;
+        height: 100%;
+    }
+    #videoPlayer {
+        width: 100%;
+        height: 100%;
+    }
+    #volumeSlider {
+    display: flex;
+    position: fixed;
+    top: 50%;
+    right: -50px;
+    transform: translateY(-50%);
+    width: 50px;
+    height: 15vh;
+    background-color: #3f3f3fa4;
+    border-radius: 5px;
+    z-index: 2147483647;
+    transition: right 0.5s;
+    writing-mode: bt-lr;
+    flex-direction: column;
+    justify-content: space-between;
+    /* padding: 10px 0 10px 0; */
+    overflow: hidden;
+    }
+    #volumeControl {
+        -webkit-appearance: none;
+    appearance: none;
+    /* z-index: 2147483647; */
+    width: 100%;
+    height: 100%;
+    margin: 0 !important;
+    writing-mode: vertical-lr;
+    direction: rtl;
+    position: absolute;
+    background-color: #ffffff00;
+    }
+
+    #volumeControl::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 0;
+    height: 0;
+    box-shadow: 0rem 7.5rem 0 7.5rem rgba(124, 124, 124, 0.418);
+}
+
+#volumeControl::-moz-range-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 0;
+    height: 0;
+    box-shadow: 0rem 7.5rem 0 7.5rem rgba(124, 124, 124, 0.418);
+}
+    #volumeValue {
+        color: white;
+        margin-bottom: 5px;
+        pointer-events: none;
+        z-index: 2;
+        text-align: center;
+        font-size: 12px;
+    }
+    #speakerIcon {
+        color: white;
+        margin-top: 5px;
+        pointer-events: none;
+        z-index: 2;
+        text-align: center;
+    
+        font-size: 16px;
+    }
+    #fullscreenIcon {
+        opacity: 50%;
+    position: absolute;
+    top: 10px;
+    cursor: pointer;
+    z-index: 1;
+    right: 10px;
+    color: white;
+    height: 24px;
+    }
+    video::-webkit-media-controls-volume-slider,
+    video::-webkit-media-controls-mute-button,
+    video::-webkit-media-controls-volume-slider-container {
+        display: none !important;
+    }
+
+    /* Cacher le bouton de plein écran */
+    video::-webkit-media-controls-fullscreen-button {
+        display: none !important;
+    }
+</style>
+</head>
+<body>
+    <form id="videoForm">
+        <input type="text" id="videoUrl" name="videoUrl" placeholder=" Entrez le lien"><br>
+        <button type="submit" class="material-symbols-outlined">
+            smart_display
+        </button>
+    </form>
+    <div id="videoContainer">
+        <div id="fullscreenIcon" onclick="toggleFullScreen()"><span class="material-symbols-outlined" id="iconFullscreen">
+            fullscreen
+            </span></div>
+        <video id="videoPlayer" controls controlsList="nodownload nofullscreen"></video>
+        <audio id="audioPlayer" controls style="display: none;"></audio>
+        <div id="volumeSlider">
+            <div id="speakerIcon"><span class="material-symbols-outlined">
+                volume_up
+                </span></div>
+            <input type="range" id="volumeControl" min="0" max="100" step="1" value="100" orient="vertical">
+            <div id="volumeValue">100</div>
+        </div>
+    </div>
+
+    <script>
+        var videoContainer = document.getElementById("videoContainer");
+        var videoPlayer = document.getElementById("videoPlayer");
+        var audioPlayer = document.getElementById("audioPlayer");
+        var volumeControl = document.getElementById("volumeControl");
+        var volumeValue = document.getElementById("volumeValue");
+        var fullscreenIcon = document.getElementById("fullscreenIcon");
+        var lastVideoTime = 0;
+        var lastAudioTime = 0;
+        var mouseIdle = false;
+        var mouseIdleTimer;
+
+        // Fonction pour mettre à jour la position du slider de volume en fonction du volume actuel des lecteurs vidéo et audio
+        function updateVolumeSlider() {
+            var volume = videoPlayer.volume * 100;
+            volumeControl.value = volume;
+            volumeValue.textContent = Math.round(volume);
+        }
+
+        // Afficher le slider de volume
+        function showVolumeSlider() {
+            volumeSlider.style.right = "10px";
+        }
+
+        // Cacher le slider de volume
+        function hideVolumeSlider() {
+            volumeSlider.style.right = "-50px";
+        }
+
+        // Gérer l'affichage du slider de volume lors du survol
+        volumeSlider.addEventListener("mouseenter", function() {
+            showVolumeSlider();
+        });
+
+        volumeSlider.addEventListener("mouseleave", function() {
+            if (!volumeControl.matches(":focus")) {
+                hideVolumeSlider();
+            }
+        });
+
+        // Afficher/cacher le slider de volume lors du survol du côté droit de l'écran
+        document.addEventListener("mousemove", function(event) {
+            if (event.clientX > window.innerWidth - 50) { // 50 est une marge
+                showVolumeSlider();
+            } else {
+                hideVolumeSlider();
+            }
+            clearTimeout(mouseIdleTimer);
+            if (!mouseIdle) {
+                mouseIdleTimer = setTimeout(function() {
+                    mouseIdle = true;
+                    if (!videoPlayer.paused) {
+                        fullscreenIcon.style.opacity = "0";
+                    }
+                }, 2000); // Temps d'inactivité avant de cacher l'icône (en millisecondes)
+            }
+            if (mouseIdle && !videoPlayer.paused) {
+                fullscreenIcon.style.opacity = "1";
+                mouseIdle = false;
+            }
+        });
+
+        // Mettre à jour le volume en fonction de la valeur du slider
+        volumeControl.addEventListener("input", function() {
+            var volume = volumeControl.value / 100;
+            videoPlayer.volume = volume;
+            audioPlayer.volume = volume;
+            volumeValue.textContent = volumeControl.value;
+        });
+
+        // Contrôler le volume avec la molette de la souris
+        volumeSlider.addEventListener("wheel", function(event) {
+            event.preventDefault();
+            var delta = Math.sign(event.deltaY); // Vérifie la direction du défilement
+            var step = 1; // Pas de changement de volume
+            if (delta > 0) {
+                step *= -1; // Inversion du pas si le défilement est vers le bas
+            }
+            var newValue = parseInt(volumeControl.value) + step;
+            volumeControl.value = Math.min(Math.max(newValue, volumeControl.min), volumeControl.max);
+            var volume = volumeControl.value / 100;
+            videoPlayer.volume = volume;
+            audioPlayer.volume = volume;
+            volumeValue.textContent = volumeControl.value;
+        });
+        var iconSpan = document.getElementById("iconFullscreen");
+        // Activer/désactiver le mode plein écran pour la div vidéo
+        function toggleFullScreen() {
+           
+            if (!document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+                iconSpan.textContent = "fullscreen_exit";
+                if (videoContainer.requestFullscreen) {
+                    videoContainer.requestFullscreen();
+                } else if (videoContainer.mozRequestFullScreen) { /* Firefox */
+                    videoContainer.mozRequestFullScreen();
+                } else if (videoContainer.webkitRequestFullscreen) { /* Chrome, Safari & Opera */
+                    videoContainer.webkitRequestFullscreen();
+                } else if (videoContainer.msRequestFullscreen) { /* IE/Edge */
+                    videoContainer.msRequestFullscreen();
+                }
+            } else {
+                iconSpan.textContent = "fullscreen";
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.mozCancelFullScreen) { /* Firefox */
+                    document.mozCancelFullScreen();
+                } else if (document.webkitExitFullscreen) { /* Chrome, Safari & Opera */
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) { /* IE/Edge */
+                    document.msExitFullscreen();
+                }
+            }
+        }
+
+        // Activer le mode plein écran en double-cliquant sur le lecteur vidéo
+        videoPlayer.addEventListener("dblclick", function() {
+            toggleFullScreen();
+        });
+
+        videoPlayer.addEventListener("click", function() {
+    if (videoPlayer.paused) {
+        videoPlayer.play();
+    } else {
+        videoPlayer.pause();
+    }
+});
+
+
+
+        document.getElementById("videoForm").addEventListener("submit", function(event) {
+            event.preventDefault(); // Empêche le rechargement de la page lors de la soumission du formulaire
+            var urls = document.getElementById("videoUrl").value.split(",");
+            var videoUrl = urls[0].trim();
+            var audioUrl = urls.length > 1 ? urls[1].trim() : null;
+            var subtitlesUrl = urls.length > 2 ? urls[2].trim() : null;
+
+            videoPlayer.src = videoUrl;
+            audioPlayer.src = audioUrl;
+
+            // Ajouter les sous-titres
+            if (subtitlesUrl) {
+                var track = document.createElement("track");
+                track.src = subtitlesUrl;
+                track.kind = "subtitles";
+                track.srclang = "fr"; // Remplacez "fr" par le code de la langue des sous-titres si nécessaire
+                videoPlayer.appendChild(track);
+            }
+
+            // Mettre en pause les deux lecteurs quand l'un est mis en pause
+            videoPlayer.addEventListener("play", function() {
+                if (audioPlayer.paused) {
+                    if (Math.abs(videoPlayer.currentTime - lastVideoTime) > 0.01) { // Vérifie s'il y a un changement significatif de temps
+                        audioPlayer.currentTime = videoPlayer.currentTime;
+                        lastAudioTime = audioPlayer.currentTime;
+                        lastVideoTime = videoPlayer.currentTime;
+                        console.log("Maj a");
+                    } else if (Math.abs(audioPlayer.currentTime - lastAudioTime) > 0.01) {
+                        videoPlayer.currentTime = audioPlayer.currentTime;
+                        lastVideoTime = videoPlayer.currentTime;
+                        lastAudioTime = audioPlayer.currentTime;
+                        console.log("Maj v");
+                    }
+                    audioPlayer.play();
+                }
+            });
+            videoPlayer.addEventListener("pause", function() {
+                if (!audioPlayer.paused) {
+                    if (Math.abs(videoPlayer.currentTime - lastVideoTime) > 0.025) { // Vérifie s'il y a un changement significatif de temps
+                        audioPlayer.currentTime = videoPlayer.currentTime;
+                        lastAudioTime = audioPlayer.currentTime;
+                        lastVideoTime = videoPlayer.currentTime;
+                        console.log("Maj a");
+                    } else if (Math.abs(audioPlayer.currentTime - lastAudioTime) > 0.025) {
+                        videoPlayer.currentTime = audioPlayer.currentTime;
+                        lastVideoTime = videoPlayer.currentTime;
+                        lastAudioTime = audioPlayer.currentTime;
+                        console.log("Maj v");
+                    }
+                    audioPlayer.pause();
+                }
+            });
+
+            var isVideoLoading = false;
+
+videoPlayer.addEventListener("seeked", function() {
+    // Ne synchronisez que si la vidéo est chargée
+    if (!isVideoLoading) {
+        synchronizePlayback();
+    }
+});
+
+// Gérez les événements de chargement de la vidéo
+videoPlayer.addEventListener("loadedmetadata", function() {
+    isVideoLoading = false;
+    synchronizePlayback(); // Synchroniser une fois que la vidéo est prête
+});
+
+videoPlayer.addEventListener("loadstart", function() {
+    isVideoLoading = true;
+});
+
+// Fonction pour synchroniser les temps de lecture de la vidéo et de l'audio
+function synchronizePlayback() {
+    if (Math.abs(videoPlayer.currentTime - lastVideoTime) > 0.025) {
+        audioPlayer.currentTime = videoPlayer.currentTime;
+        lastAudioTime = audioPlayer.currentTime;
+        lastVideoTime = videoPlayer.currentTime;
+        console.log("Maj a");
+    } else if (Math.abs(audioPlayer.currentTime - lastAudioTime) > 0.025) {
+        videoPlayer.currentTime = audioPlayer.currentTime;
+        lastVideoTime = videoPlayer.currentTime;
+        lastAudioTime = audioPlayer.currentTime;
+        console.log("Maj v");
+    }
+}
+
+
+
+            audioPlayer.addEventListener("play", function() {
+                if (videoPlayer.paused) {
+                    videoPlayer.play();
+                }
+            });
+            audioPlayer.addEventListener("pause", function() {
+                if (!videoPlayer.paused) {
+                    videoPlayer.pause();
+                }
+            });
+
+            // Lancer la lecture
+            videoPlayer.play();
+            if (audioUrl) {
+                audioPlayer.play();
+            }
+
+            // Mettre à jour la position du slider de volume
+            updateVolumeSlider();
+        });
+    </script>
+</body>
+</html>
